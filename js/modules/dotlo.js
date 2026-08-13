@@ -1,123 +1,83 @@
 import { db } from '../firebase-config.js';
-import { collection, addDoc, getDocs, query, orderBy, limit, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { collection, addDoc, getDocs, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-const dotLoRef = collection(db, "nhat_ky_dot_lo");
-let chartNhietDo; // Biến lưu trữ biểu đồ
+// Lấy thông tin user đăng nhập
+const userStr = localStorage.getItem('currentUser');
+if (!userStr) window.location.href = 'login.html';
+const user = JSON.parse(userStr);
 
-// Hàm vẽ/cập nhật biểu đồ
-async function loadBieuDo() {
+// 1. LOGIC LIÊN KẾT VẬT TƯ XUẤT KHO
+const inputNgay = document.getElementById('ngayDotLo');
+const khuVucHienThi = document.getElementById('bangVatTuXuatNgay');
+
+async function taiVatTuLienKet(ngayChon) {
+    if (!khuVucHienThi) return;
+    khuVucHienThi.innerHTML = '<li class="list-group-item bg-transparent text-muted px-0">Đang quét dữ liệu kho...</li>';
+    
     try {
-        // Lấy 10 lần cập nhật gần nhất
-        const q = query(dotLoRef, orderBy("thoi_gian", "desc"), limit(12));
-        const querySnapshot = await getDocs(q);
+        const q = query(
+            collection(db, "nhat_ky_kho"), 
+            where("loai_phieu", "==", "xuat"),
+            where("ngay_thuc_hien", "==", ngayChon) 
+        );
+        const snapshot = await getDocs(q);
         
-        const labels = [];
-        const dataCont1 = [];
-        const dataCont2 = [];
-
-        // Đọc dữ liệu (do order desc nên cần đảo ngược lại mảng để vẽ từ cũ -> mới)
-        const reversedDocs = [];
-        querySnapshot.forEach((doc) => reversedDocs.unshift(doc));
-
-        reversedDocs.forEach((docSnap) => {
-            const data = docSnap.data();
-            
-            // Lấy giờ:phút
-            const timeString = data.thoi_gian ? data.thoi_gian.toDate().toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'}) : '';
-            labels.push(timeString);
-            
-            // Tính trung bình 4 đồng hồ cho mỗi Cont
-            const tbC1 = (data.c1_1 + data.c1_2 + data.c1_3 + data.c1_4) / 4;
-            const tbC2 = (data.c2_1 + data.c2_2 + data.c2_3 + data.c2_4) / 4;
-            
-            dataCont1.push(tbC1);
-            dataCont2.push(tbC2);
-        });
-
-        // Cấu hình Chart.js
-        const ctx = document.getElementById('bieuDoNhietDo').getContext('2d');
-        
-        // Hủy biểu đồ cũ nếu đã tồn tại để vẽ lại
-        if (chartNhietDo) {
-            chartNhietDo.destroy();
+        if (snapshot.empty) {
+            khuVucHienThi.innerHTML = '<li class="list-group-item bg-transparent text-danger px-0">Chưa có phiếu xuất nguyên liệu (mùn cưa, cám...) nào trong ngày này.</li>';
+            return;
         }
 
-        chartNhietDo = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [
-                    {
-                        label: 'Trung bình Cont 1 (°C)',
-                        data: dataCont1,
-                        borderColor: '#0d6efd', // Màu xanh dương
-                        backgroundColor: 'rgba(13, 110, 253, 0.1)',
-                        tension: 0.3,
-                        fill: true
-                    },
-                    {
-                        label: 'Trung bình Cont 2 (°C)',
-                        data: dataCont2,
-                        borderColor: '#ffc107', // Màu vàng
-                        backgroundColor: 'rgba(255, 193, 7, 0.1)',
-                        tension: 0.3,
-                        fill: true
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    y: {
-                        beginAtZero: false,
-                        suggestedMin: 80, // Nhiệt độ thanh trùng thường cao
-                        suggestedMax: 105
-                    }
-                }
-            }
+        khuVucHienThi.innerHTML = '';
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            khuVucHienThi.innerHTML += `
+                <li class="list-group-item bg-transparent d-flex justify-content-between align-items-center px-0 py-1">
+                    <span class="fw-bold">${data.ten_vat_tu}</span>
+                    <span class="badge bg-danger rounded-pill">- ${data.so_luong} ${data.don_vi}</span>
+                </li>`;
         });
-
     } catch (error) {
-        console.error("Lỗi khi tải biểu đồ: ", error);
+        khuVucHienThi.innerHTML = '<li class="list-group-item bg-transparent text-danger px-0">Lỗi kết nối cơ sở dữ liệu.</li>';
     }
 }
 
-// Xử lý Ghi nhận nhiệt độ
-document.getElementById('formDotLo').addEventListener('submit', async (e) => {
-    e.preventDefault();
+// Chạy tự động lấy ngày hiện tại (Định dạng YYYY-MM-DD)
+if (inputNgay) {
+    const today = new Date().toLocaleDateString('en-CA');
+    inputNgay.value = today;
+    taiVatTuLienKet(today);
     
-    const btnLuu = document.getElementById('btnLuuNhietDo');
-    btnLuu.disabled = true;
-    btnLuu.innerText = "Đang ghi...";
+    inputNgay.addEventListener('change', (e) => {
+        taiVatTuLienKet(e.target.value);
+    });
+}
 
-    // Thu thập dữ liệu
-    const logData = {
-        thoi_tiet: document.getElementById('thoiTiet').value,
-        cui_dot: document.getElementById('cuiDot').value,
-        c1_1: Number(document.getElementById('c1_1').value),
-        c1_2: Number(document.getElementById('c1_2').value),
-        c1_3: Number(document.getElementById('c1_3').value),
-        c1_4: Number(document.getElementById('c1_4').value),
-        c2_1: Number(document.getElementById('c2_1').value),
-        c2_2: Number(document.getElementById('c2_2').value),
-        c2_3: Number(document.getElementById('c2_3').value),
-        c2_4: Number(document.getElementById('c2_4').value),
-        nguoi_thuc_hien: "nv_001",
-        thoi_gian: serverTimestamp()
-    };
+// 2. LƯU MẺ ĐỐT LÒ
+const formDotLo = document.getElementById('formDotLo');
+if (formDotLo) {
+    formDotLo.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('btnLuuDotLo');
+        btn.disabled = true;
 
-    try {
-        await addDoc(dotLoRef, logData);
-        document.getElementById('formDotLo').reset();
-        loadBieuDo(); // Vẽ lại biểu đồ ngay lập tức
-    } catch (error) {
-        console.error("Lỗi khi lưu nhiệt độ: ", error);
-        alert("Lưu thất bại. Vui lòng thử lại!");
-    } finally {
-        btnLuu.disabled = false;
-        btnLuu.innerText = "Ghi Nhận Nhiệt Độ";
-    }
-});
-
-// Khởi tạo
-window.onload = loadBieuDo;
+        try {
+            await addDoc(collection(db, "nhat_ky_dot_lo"), {
+                me_lo: document.getElementById('meLo') ? document.getElementById('meLo').value.trim() : "Không rõ",
+                ngay_dot: document.getElementById('ngayDotLo').value,
+                so_luong_phoi: Number(document.getElementById('soLuongPhoi').value),
+                nguoi_thuc_hien: user.ten_hien_thi, // Ai đăng nhập thì ghi tên người đó
+                ma_nv: user.ma_nv,
+                thoi_gian: serverTimestamp()
+            });
+            alert("Lưu mẻ lò thành công!");
+            formDotLo.reset();
+            inputNgay.value = new Date().toLocaleDateString('en-CA');
+            taiVatTuLienKet(inputNgay.value);
+        } catch (error) {
+            console.error("Lỗi:", error);
+            alert("Có lỗi khi lưu!");
+        } finally {
+            btn.disabled = false;
+        }
+    });
+}
