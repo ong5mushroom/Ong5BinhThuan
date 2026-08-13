@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xuất Báo Cáo - Nấm Ông 5</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg custom-navbar">
+        <div class="container-fluid">
+            <a class="navbar-brand text-white fw-bold" href="index.html">🍄 Nấm Ông 5</a>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link text-white" href="index.html">Trang chủ</a></li>
+                    <li class="nav-item"><a class="nav-link text-white" href="kho.html">Kho</a></li>
+                    <li class="nav-item"><a class="nav-link text-white" href="sanxuat.html">Sản xuất</a></li>
+                    <li class="nav-item"><a class="nav-link text-white" href="giong.html">Giống</a></li>
+                    <li class="nav-item"><a class="nav-link text-white" href="dotlo.html">Đốt lò</a></li>
+                    <li class="nav-item"><a class="nav-link text-white" href="quantri.html">Quản trị</a></li>
+                    <li class="nav-item"><a class="nav-link active text-white fw-bold" href="baocao.html">Báo cáo</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <h3 class="fw-bold text-primary mb-4">📊 Trung tâm Kết xuất Báo cáo (Excel)</h3>
+        
+        <div class="row">
+            <!-- Báo cáo Nhân sự -->
+            <div class="col-md-4 mb-3">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-body text-center py-4">
+                        <h5 class="fw-bold mb-3">Nhân sự & Chấm công</h5>
+                        <p class="text-muted small">Xuất toàn bộ lịch sử điểm danh nhận ca, kết ca của nhân viên.</p>
+                        <button class="btn btn-primary w-100" id="btnXuatChamCong">📥 Xuất Excel Chấm Công</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Báo cáo Kho -->
+            <div class="col-md-4 mb-3">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-body text-center py-4">
+                        <h5 class="fw-bold mb-3">Tồn Kho Vật Tư</h5>
+                        <p class="text-muted small">Xuất bảng tổng hợp số lượng nguyên vật liệu đang tồn trong kho.</p>
+                        <button class="btn btn-success w-100" id="btnXuatTonKho">📥 Xuất Excel Tồn Kho</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Báo cáo Sản xuất -->
+            <div class="col-md-4 mb-3">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-body text-center py-4">
+                        <h5 class="fw-bold mb-3">Lịch sử Đóng phôi</h5>
+                        <p class="text-muted small">Xuất bảng thống kê tỷ lệ đạt/hư hỏng của các lô phôi sản xuất.</p>
+                        <button class="btn btn-warning w-100" id="btnXuatSanXuat">📥 Xuất Excel Sản Xuất</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Thư viện Bootstrap & SheetJS (Excel) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    
+    <!-- Module xử lý logic -->
+    <script type="module" src="js/modules/baocao.js"></script>
+</body>
+</html>
