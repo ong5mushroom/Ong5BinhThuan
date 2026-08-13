@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Trị Hệ Thống - Nấm Ông 5</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg custom-navbar">
+        <div class="container-fluid">
+            <a class="navbar-brand text-white fw-bold" href="index.html">🍄 Nấm Ông 5</a>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link text-white" href="index.html">Trang chủ</a></li>
+                    <li class="nav-item"><a class="nav-link text-white" href="kho.html">Kho</a></li>
+                    <li class="nav-item"><a class="nav-link text-white" href="sanxuat.html">Sản xuất</a></li>
+                    <li class="nav-item"><a class="nav-link text-white" href="giong.html">Giống</a></li>
+                    <li class="nav-item"><a class="nav-link text-white" href="dotlo.html">Đốt lò</a></li>
+                    <li class="nav-item"><a class="nav-link active text-white fw-bold" href="quantri.html">Quản trị</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="fw-bold text-primary">⚙️ Quản trị Hệ thống</h3>
+            <button class="btn btn-outline-primary fw-bold" id="btnXuatChamCong">📥 Xuất bảng chấm công</button>
+        </div>
+        
+        <div class="row">
+            <!-- Cột 1: Quản lý Nhân viên -->
+            <div class="col-md-7 mb-4">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between mb-3">
+                            <h5 class="fw-bold">Danh sách Nhân sự</h5>
+                            <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#modalNhanVien">+ Thêm NV mới</button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead class="table-primary">
+                                    <tr>
+                                        <th>Mã NV</th>
+                                        <th>Họ & Tên</th>
+                                        <th>Chức vụ / Quyền</th>
+                                        <th>Trạng thái</th>
+                                        <th>Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="bangNhanVien">
+                                    <tr><td colspan="5" class="text-muted text-center">Đang tải dữ liệu...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cột 2: Đơn từ & Đề xuất -->
+            <div class="col-md-5 mb-4">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-body">
+                        <h5 class="fw-bold mb-3">Đơn xin nghỉ & Đề xuất mua hàng</h5>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle small">
+                                <thead class="table-warning">
+                                    <tr>
+                                        <th>Ngày</th>
+                                        <th>Người gửi</th>
+                                        <th>Loại đơn</th>
+                                        <th>Nội dung</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="bangDonTu">
+                                    <tr><td colspan="4" class="text-muted text-center">Đang tải dữ liệu...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Thêm Nhân Viên -->
+    <div class="modal fade" id="modalNhanVien" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Tạo tài khoản Nhân viên</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formNhanVien">
+                        <div class="mb-3">
+                            <label class="form-label">Mã Nhân viên</label>
+                            <input type="text" class="form-control" id="maNV" placeholder="VD: NV002" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Họ và Tên</label>
+                            <input type="text" class="form-control" id="tenNV" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Phân quyền</label>
+                            <select class="form-select" id="quyenNV">
+                                <option value="nhan_vien">Nhân viên phổ thông</option>
+                                <option value="to_truong">Tổ trưởng (Kho/Sản xuất)</option>
+                                <option value="to_giong">Tổ trưởng (Giống)</option>
+                                <option value="admin">Quản trị viên (Admin)</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Mật khẩu đăng nhập</label>
+                            <input type="text" class="form-control" id="matKhau" placeholder="Cấp mật khẩu ban đầu" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 fw-bold" id="btnLuuNV">Tạo tài khoản</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="module" src="js/modules/quantri.js"></script>
+</body>
+</html>
