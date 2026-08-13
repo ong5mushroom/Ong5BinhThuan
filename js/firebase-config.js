@@ -1,11 +1,9 @@
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+// Import Firebase core qua CDN (Dành cho web HTML/JS thuần)
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+import { getFirestore } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+// Cấu hình Firebase thực tế của Nấm Ông 5
 const firebaseConfig = {
   apiKey: "AIzaSyBQDQfYuhf0AWOtmcdufVGeXlzwnSJ33Vw",
   authDomain: "ong5mushroom-vietnam.firebaseapp.com",
@@ -16,6 +14,7 @@ const firebaseConfig = {
   measurementId: "G-G0HJZJTFZ3"
 };
 
-// Initialize Firebase
+// Khởi tạo Firebase và xuất các biến để các file khác sử dụng
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+export const db = getFirestore(app);
+export const auth = getAuth(app);
