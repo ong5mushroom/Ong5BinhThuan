@@ -7,8 +7,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
+    <!-- Thư viện vẽ biểu đồ Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body>
+<body class="bg-light">
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg custom-navbar">
         <div class="container-fluid">
@@ -20,69 +22,89 @@
                     <li class="nav-item"><a class="nav-link text-white" href="sanxuat.html">Sản xuất</a></li>
                     <li class="nav-item"><a class="nav-link text-white" href="giong.html">Giống</a></li>
                     <li class="nav-item"><a class="nav-link active text-white fw-bold" href="dotlo.html">Đốt lò</a></li>
+                    <li class="nav-item"><a class="nav-link text-white" href="baocao.html">Báo cáo</a></li>
+                    <li class="nav-item"><a class="nav-link text-warning fw-bold" href="quantri.html" id="navQuanTri" style="display: none;">⚙️ Quản trị</a></li>
                 </ul>
             </div>
         </div>
     </nav>
 
     <div class="container mt-4">
-        <h3 class="fw-bold text-danger mb-4">🔥 Nhật ký Đốt Lò Thanh Trùng</h3>
+        <h3 class="fw-bold text-danger mb-4">🔥 Quản lý Đốt Lò Thanh Trùng</h3>
         
         <div class="row">
-            <!-- Form Nhập Nhiệt Độ -->
-            <div class="col-md-4">
-                <div class="card shadow-sm border-0 mb-4">
-                    <div class="card-body">
-                        <h5 class="fw-bold mb-3">Cập nhật Nhiệt độ (Mỗi giờ)</h5>
+            <!-- Form Ghi nhận Đốt Lò -->
+            <div class="col-md-5">
+                <div class="card shadow-sm border-0 mb-4 rounded-4">
+                    <div class="card-body p-4">
+                        <h5 class="fw-bold mb-3">Tạo Mẻ Đốt Lò Mới</h5>
                         <form id="formDotLo">
-                            <div class="mb-3 row">
-                                <div class="col-6">
-                                    <label class="form-label small">Thời tiết</label>
-                                    <input type="text" class="form-control form-control-sm" id="thoiTiet" placeholder="VD: Mưa to">
-                                </div>
-                                <div class="col-6">
-                                    <label class="form-label small">Loại củi</label>
-                                    <input type="text" class="form-control form-control-sm" id="cuiDot" placeholder="VD: Củi cao su">
-                                </div>
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Mẻ lò số / Tên mẻ</label>
+                                <input type="text" class="form-control form-control-sm" id="meLo" placeholder="VD: Mẻ 01 - Lò A" required>
                             </div>
                             
-                            <h6 class="text-primary fw-bold mt-3 border-bottom pb-1">Container 1</h6>
-                            <div class="row g-2 mb-3">
-                                <div class="col-3"><input type="number" class="form-control form-control-sm" id="c1_1" placeholder="ĐH 1" required></div>
-                                <div class="col-3"><input type="number" class="form-control form-control-sm" id="c1_2" placeholder="ĐH 2" required></div>
-                                <div class="col-3"><input type="number" class="form-control form-control-sm" id="c1_3" placeholder="ĐH 3" required></div>
-                                <div class="col-3"><input type="number" class="form-control form-control-sm" id="c1_4" placeholder="ĐH 4" required></div>
+                            <div class="mb-3 row">
+                                <div class="col-6">
+                                    <label class="form-label small fw-bold">Ngày đốt lò</label>
+                                    <input type="date" class="form-control form-control-sm" id="ngayDotLo" required>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small fw-bold text-danger">Số lượng phôi (bịch)</label>
+                                    <input type="number" class="form-control form-control-sm" id="soLuongPhoi" min="1" placeholder="Nhập số bịch..." required>
+                                </div>
                             </div>
 
-                            <h6 class="text-warning fw-bold mt-3 border-bottom pb-1">Container 2</h6>
-                            <div class="row g-2 mb-3">
-                                <div class="col-3"><input type="number" class="form-control form-control-sm" id="c2_1" placeholder="ĐH 1" required></div>
-                                <div class="col-3"><input type="number" class="form-control form-control-sm" id="c2_2" placeholder="ĐH 2" required></div>
-                                <div class="col-3"><input type="number" class="form-control form-control-sm" id="c2_3" placeholder="ĐH 3" required></div>
-                                <div class="col-3"><input type="number" class="form-control form-control-sm" id="c2_4" placeholder="ĐH 4" required></div>
+                            <!-- Khung liên kết tự động hiển thị Vật tư xuất trong ngày -->
+                            <div class="alert alert-secondary border-0 p-3 mb-4 rounded-3">
+                                <h6 class="fw-bold text-primary mb-2">🔄 Vật tư dùng cho mẻ này (Trong ngày)</h6>
+                                <ul class="list-group list-group-flush small rounded" id="bangVatTuXuatNgay">
+                                    <li class="list-group-item bg-transparent text-muted px-0">Vui lòng chọn ngày để tải dữ liệu...</li>
+                                </ul>
                             </div>
 
-                            <button type="submit" class="btn btn-danger w-100 fw-bold" id="btnLuuNhietDo">Ghi Nhận Nhiệt Độ</button>
+                            <button type="submit" class="btn btn-danger w-100 fw-bold shadow-sm" id="btnLuuDotLo">🔥 Ghi nhận Mẻ Lò</button>
                         </form>
                     </div>
                 </div>
             </div>
 
-            <!-- Biểu đồ & Bảng -->
-            <div class="col-md-8">
-                <div class="card shadow-sm border-0 mb-4">
-                    <div class="card-body">
-                        <h5 class="fw-bold mb-3">Biểu đồ Giám sát Nhiệt độ</h5>
-                        <!-- Canvas để Chart.js vẽ biểu đồ -->
-                        <canvas id="bieuDoNhietDo" height="120"></canvas>
+            <!-- Cột phải: Biểu đồ và Bảng Lịch sử -->
+            <div class="col-md-7">
+                <!-- Khu vực Biểu đồ -->
+                <div class="card shadow-sm border-0 rounded-4 mb-4">
+                    <div class="card-body p-4">
+                        <h5 class="fw-bold mb-3">📈 Biểu đồ Khối lượng (7 mẻ gần nhất)</h5>
+                        <canvas id="bieuDoDotLo" height="120"></canvas>
+                    </div>
+                </div>
+
+                <!-- Bảng Thống kê Lịch sử -->
+                <div class="card shadow-sm border-0 rounded-4">
+                    <div class="card-body p-4">
+                        <h5 class="fw-bold mb-3">Lịch sử Đốt lò</h5>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle small">
+                                <thead class="table-danger">
+                                    <tr>
+                                        <th>Ngày đốt</th>
+                                        <th>Mã Mẻ Lò</th>
+                                        <th>Tổng Phôi</th>
+                                        <th>Người thực hiện</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="bangDotLo">
+                                    <tr><td colspan="4" class="text-muted text-center">Đang tải dữ liệu...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Nạp thư viện Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script type="module" src="js/modules/dotlo.js"></script>
 </body>
 </html>
