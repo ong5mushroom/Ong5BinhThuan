@@ -8,7 +8,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
 </head>
-<body>
+<body class="bg-light">
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg custom-navbar">
         <div class="container-fluid">
@@ -20,70 +20,76 @@
                     <li class="nav-item"><a class="nav-link active text-white fw-bold" href="sanxuat.html">Sản xuất</a></li>
                     <li class="nav-item"><a class="nav-link text-white" href="giong.html">Giống</a></li>
                     <li class="nav-item"><a class="nav-link text-white" href="dotlo.html">Đốt lò</a></li>
+                    <li class="nav-item"><a class="nav-link text-white" href="baocao.html">Báo cáo</a></li>
+                    <li class="nav-item"><a class="nav-link text-warning fw-bold" href="quantri.html" id="navQuanTri" style="display: none;">⚙️ Quản trị</a></li>
                 </ul>
             </div>
         </div>
     </nav>
 
     <div class="container mt-4">
-        <h3 class="fw-bold text-success mb-4">🏭 Quản lý Sản xuất (Đóng phôi)</h3>
+        <h3 class="fw-bold text-success mb-4">🏭 Nhật ký Đóng phôi & Sản xuất</h3>
         
         <div class="row">
-            <!-- Form Ghi nhận Lô mới -->
-            <div class="col-md-4">
-                <div class="card shadow-sm border-0 mb-4">
-                    <div class="card-body">
-                        <h5 class="fw-bold mb-3">Ghi nhận Lô Phôi mới</h5>
+            <!-- Form Ghi nhận Sản xuất -->
+            <div class="col-md-5">
+                <div class="card shadow-sm border-0 mb-4 rounded-4">
+                    <div class="card-body p-4">
+                        <h5 class="fw-bold mb-3">Cập nhật Lô Phôi</h5>
                         <form id="formSanXuat">
                             <div class="mb-3">
-                                <label class="form-label">Loại nấm</label>
-                                <select class="form-select" id="loaiNam" required>
-                                    <option value="Nấm Hương (không hoa cô)">Nấm Hương (dòng không hoa cô)</option>
-                                    <option value="Nấm Đông Cô (có hoa cô)">Nấm Đông Cô (dòng có hoa cô)</option>
-                                    <option value="Nấm Hầu Thủ">Nấm Hầu Thủ</option>
+                                <label class="form-label small fw-bold">Loại nấm (Sản phẩm)</label>
+                                <select class="form-select form-select-sm border-success" id="loaiNam" required>
+                                    <option value="">Đang tải danh mục...</option>
                                 </select>
                             </div>
+                            
                             <div class="mb-3">
-                                <label class="form-label">Tổng số phôi thực hiện (bịch)</label>
-                                <input type="number" class="form-control" id="tongPhoi" min="1" required>
+                                <label class="form-label small fw-bold">Tổng số phôi làm ra (bịch)</label>
+                                <input type="number" class="form-control form-control-sm" id="tongPhoi" min="1" required>
                             </div>
+
+                            <div class="mb-3 row">
+                                <div class="col-6">
+                                    <label class="form-label small fw-bold text-success">Phôi Đạt (bịch)</label>
+                                    <input type="number" class="form-control form-control-sm" id="phoiDat" min="0" required>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small fw-bold text-danger">Phôi Hư (bịch)</label>
+                                    <input type="number" class="form-control form-control-sm" id="phoiHu" min="0" required>
+                                </div>
+                            </div>
+                            
                             <div class="mb-3">
-                                <label class="form-label">Số phôi Đạt</label>
-                                <input type="number" class="form-control" id="phoiDat" min="0" required>
+                                <label class="form-label small fw-bold text-warning">Tận dụng (bịch) - Nếu có</label>
+                                <input type="number" class="form-control form-control-sm" id="phoiTanDung" value="0" min="0">
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label">Số phôi Hư hỏng</label>
-                                <input type="number" class="form-control" id="phoiHu" min="0" required>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Số phôi Tận dụng</label>
-                                <input type="number" class="form-control" id="phoiTanDung" min="0" value="0">
-                            </div>
-                            <button type="submit" class="btn btn-success w-100" id="btnLuuLo">Lưu & Tính tỷ lệ</button>
+
+                            <button type="submit" class="btn btn-success w-100 fw-bold shadow-sm" id="btnLuuSanXuat">Lưu Nhật Ký</button>
                         </form>
                     </div>
                 </div>
             </div>
 
-            <!-- Bảng Thống kê Lô Sản xuất -->
-            <div class="col-md-8">
-                <div class="card shadow-sm border-0">
-                    <div class="card-body">
-                        <h5 class="fw-bold mb-3">Lịch sử Đóng phôi</h5>
+            <!-- Bảng Thống kê Lịch sử -->
+            <div class="col-md-7">
+                <div class="card shadow-sm border-0 rounded-4">
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="fw-bold mb-0">Lịch sử Đóng phôi</h5>
+                        </div>
                         <div class="table-responsive">
-                            <table class="table table-hover align-middle text-center">
+                            <table class="table table-hover align-middle">
                                 <thead class="table-success">
                                     <tr>
                                         <th>Ngày</th>
                                         <th>Loại Nấm</th>
-                                        <th>Tổng</th>
-                                        <th>Đạt</th>
-                                        <th>Hư hỏng</th>
-                                        <th>Tỷ lệ hư (%)</th>
+                                        <th>Tổng Phôi</th>
+                                        <th>Tỷ lệ Hư</th>
                                     </tr>
                                 </thead>
                                 <tbody id="bangSanXuat">
-                                    <tr><td colspan="6" class="text-muted">Đang tải dữ liệu...</td></tr>
+                                    <tr><td colspan="4" class="text-muted text-center">Đang tải dữ liệu...</td></tr>
                                 </tbody>
                             </table>
                         </div>
