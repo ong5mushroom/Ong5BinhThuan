@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kho Nguyên Vật Liệu - Nấm Ông 5</title>
+    <title>Quản lý Kho - Nấm Ông 5</title>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
 </head>
-<body>
+<body class="bg-light">
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg custom-navbar">
         <div class="container-fluid">
@@ -20,82 +20,100 @@
                     <li class="nav-item"><a class="nav-link text-white" href="sanxuat.html">Sản xuất</a></li>
                     <li class="nav-item"><a class="nav-link text-white" href="giong.html">Giống</a></li>
                     <li class="nav-item"><a class="nav-link text-white" href="dotlo.html">Đốt lò</a></li>
+                    <li class="nav-item"><a class="nav-link text-white" href="baocao.html">Báo cáo</a></li>
                 </ul>
             </div>
         </div>
     </nav>
 
     <div class="container mt-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h3 class="fw-bold text-success">📦 Quản lý Kho Vật Tư</h3>
-            <div>
-                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalGiaoDich" onclick="setLoaiGiaoDich('nhap')">📥 Nhập kho</button>
-                <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#modalGiaoDich" onclick="setLoaiGiaoDich('xuat')">📤 Xuất kho</button>
-            </div>
-        </div>
+        <h3 class="fw-bold text-success mb-4">📦 Quản lý Kho Vật Tư</h3>
+        
+        <div class="row">
+            <!-- Form Nhập/Xuất -->
+            <div class="col-md-5">
+                <div class="card shadow-sm border-0 mb-4 rounded-4">
+                    <div class="card-body p-4">
+                        <h5 class="fw-bold mb-3">Tạo Phiếu Nhập / Xuất</h5>
+                        <form id="formKho">
+                            <div class="mb-3 row">
+                                <div class="col-6">
+                                    <label class="form-label small fw-bold">Loại phiếu</label>
+                                    <select class="form-select form-select-sm border-success text-success fw-bold" id="loaiPhieu" required>
+                                        <option value="nhap">Nhập kho (+)</option>
+                                        <option value="xuat">Xuất kho (-)</option>
+                                    </select>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small fw-bold">Ngày thực hiện</label>
+                                    <input type="date" class="form-control form-control-sm" id="ngayThucHien" required>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Tên vật tư</label>
+                                <!-- Select rỗng, JavaScript sẽ tự động đổ dữ liệu từ Danh mục vào đây -->
+                                <select class="form-select form-select-sm" id="tenVatTu" required>
+                                    <option value="">Đang tải danh mục từ hệ thống...</option>
+                                </select>
+                            </div>
 
-        <!-- Bảng Tồn Kho -->
-        <div class="card shadow-sm border-0">
-            <div class="card-body">
-                <table class="table table-hover align-middle">
-                    <thead class="table-success">
-                        <tr>
-                            <th>Mã VT</th>
-                            <th>Tên Nguyên Vật Liệu</th>
-                            <th>Đơn vị tính</th>
-                            <th>Số lượng Tồn</th>
-                        </tr>
-                    </thead>
-                    <tbody id="bangTonKho">
-                        <tr><td colspan="4" class="text-center text-muted">Đang tải dữ liệu...</td></tr>
-                    </tbody>
-                </table>
+                            <div class="mb-3 row">
+                                <div class="col-6">
+                                    <label class="form-label small fw-bold">Số lượng</label>
+                                    <input type="number" class="form-control form-control-sm" id="soLuong" min="1" required>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small fw-bold">Đơn vị tính</label>
+                                    <select class="form-select form-select-sm" id="donVi" required>
+                                        <option value="kg">kg</option>
+                                        <option value="lít">lít</option>
+                                        <option value="cái">cái</option>
+                                        <option value="bịch">bịch</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="form-label small fw-bold">Ghi chú (Tên NCC, Lô hàng...)</label>
+                                <input type="text" class="form-control form-control-sm" id="ghiChuKho">
+                            </div>
+
+                            <button type="submit" class="btn btn-success w-100 fw-bold shadow-sm" id="btnLuuPhieu">Lưu Phiếu</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bảng Tồn Kho -->
+            <div class="col-md-7">
+                <div class="card shadow-sm border-0 rounded-4">
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="fw-bold mb-0">Tồn kho hiện tại</h5>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead class="table-success">
+                                    <tr>
+                                        <th>Mã VT</th>
+                                        <th>Tên vật tư</th>
+                                        <th>Tồn kho</th>
+                                        <th>Đơn vị</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="bangTonKho">
+                                    <tr><td colspan="4" class="text-muted text-center">Đang tải dữ liệu...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Modal Nhập/Xuất Kho -->
-    <div class="modal fade" id="modalGiaoDich" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title fw-bold" id="modalTitle">Giao dịch Kho</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="formGiaoDich">
-                        <input type="hidden" id="loaiGiaoDich">
-                        <div class="mb-3">
-                            <label class="form-label">Chọn Vật Tư</label>
-                            <select class="form-select" id="chonVatTu" required>
-                                <!-- Dữ liệu load từ JS -->
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Số lượng</label>
-                            <input type="number" class="form-control" id="soLuong" min="1" step="0.1" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Ghi chú / Người nhận</label>
-                            <input type="text" class="form-control" id="ghiChu">
-                        </div>
-                        <button type="submit" class="btn btn-success w-100" id="btnSubmitGiaoDich">Xác nhận</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Hàm phụ trợ đổi tiêu đề Modal UI
-        function setLoaiGiaoDich(loai) {
-            document.getElementById('loaiGiaoDich').value = loai;
-            document.getElementById('modalTitle').innerText = loai === 'nhap' ? '📥 Nhập Kho Nguyên Liệu' : '📤 Xuất Kho Sản Xuất';
-            document.getElementById('btnSubmitGiaoDich').className = loai === 'nhap' ? 'btn btn-primary w-100' : 'btn btn-warning w-100';
-        }
-    </script>
     <script type="module" src="js/modules/kho.js"></script>
 </body>
 </html>
