@@ -18,34 +18,40 @@ const inputLoaiCui = document.getElementById('loaiCui');
 const btnKetThucMe = document.getElementById('btnKetThucMe');
 let chartInstance = null;
 
-// --- TÍNH NĂNG KHÓA MẺ HẤP ---
+// --- TÍNH NĂNG KHÓA MẺ HẤP (Tối ưu) ---
 function thietLapTrangThaiMeHop(isLocked, data = null) {
+    const cacOThongTin = [inputNgay, inputMaLo, inputSoLuong, inputThoiTiet, inputLoaiCui];
+
     if (isLocked && data) {
+        // Điền lại dữ liệu từ bộ nhớ
+        inputNgay.value = data.ngayDotLo;
         inputMaLo.value = data.maLo;
         inputSoLuong.value = data.soLuong;
         inputThoiTiet.value = data.thoiTiet;
         inputLoaiCui.value = data.loaiCui;
 
-        // Chuyển sang chế độ chỉ đọc và làm mờ nền
-        inputMaLo.readOnly = true; inputMaLo.classList.add('bg-light');
-        inputSoLuong.readOnly = true; inputSoLuong.classList.add('bg-light');
-        inputThoiTiet.readOnly = true; inputThoiTiet.classList.add('bg-light');
-        inputLoaiCui.readOnly = true; inputLoaiCui.classList.add('bg-light');
+        // Khóa mờ các ô thông tin chung
+        cacOThongTin.forEach(o => {
+            if(o) {
+                o.readOnly = true;
+                o.style.backgroundColor = '#e9ecef'; // Đổi màu xám nền
+                o.style.pointerEvents = 'none'; // Khóa click
+            }
+        });
         
-        btnKetThucMe.classList.remove('d-none');
+        if(btnKetThucMe) btnKetThucMe.classList.remove('d-none');
     } else {
         // Xóa trắng để nhập mẻ mới
-        inputMaLo.value = '';
-        inputSoLuong.value = '';
-        inputThoiTiet.value = '';
-        inputLoaiCui.value = '';
-
-        inputMaLo.readOnly = false; inputMaLo.classList.remove('bg-light');
-        inputSoLuong.readOnly = false; inputSoLuong.classList.remove('bg-light');
-        inputThoiTiet.readOnly = false; inputThoiTiet.classList.remove('bg-light');
-        inputLoaiCui.readOnly = false; inputLoaiCui.classList.remove('bg-light');
-        
-        btnKetThucMe.classList.add('d-none');
+        cacOThongTin.forEach(o => {
+            if(o) {
+                o.value = '';
+                o.readOnly = false;
+                o.style.backgroundColor = '#ffffff';
+                o.style.pointerEvents = 'auto';
+            }
+        });
+        if(inputNgay) inputNgay.value = new Date().toLocaleDateString('en-CA');
+        if(btnKetThucMe) btnKetThucMe.classList.add('d-none');
     }
 }
 
@@ -56,7 +62,7 @@ thietLapTrangThaiMeHop(!!meDangDo, meDangDo);
 // Xử lý nút Kết thúc mẻ
 if (btnKetThucMe) {
     btnKetThucMe.addEventListener('click', () => {
-        if(confirm("Xác nhận KẾT THÚC mẻ hấp này? Các thông tin chung sẽ được làm mới.")) {
+        if(confirm("Xác nhận KẾT THÚC mẻ hấp này? Hệ thống sẽ mở khóa để bạn nhập mẻ mới.")) {
             localStorage.removeItem('ongoingBatch_DotLo');
             thietLapTrangThaiMeHop(false);
         }
@@ -76,6 +82,7 @@ async function loadLichSuVaBieuDo(ngayChon) {
         let bangDuLieu = [];
         snapshot.forEach(doc => { bangDuLieu.push(doc.data()); });
 
+        // Sắp xếp theo giờ tăng dần
         bangDuLieu.sort((a, b) => {
             const timeA = a.thoi_gian ? a.thoi_gian.toMillis() : 0;
             const timeB = b.thoi_gian ? b.thoi_gian.toMillis() : 0;
@@ -106,7 +113,7 @@ async function loadLichSuVaBieuDo(ngayChon) {
                         <td>${d.ma_lo}</td>
                         <td class="text-primary fw-bold">${tbC1.toFixed(1)}°C</td>
                         <td class="text-warning fw-bold">${tbC2.toFixed(1)}°C</td>
-                        <td class="text-muted">${d.nguoi_thuc_hien}</td>
+                        <td class="text-muted small">${d.nguoi_thuc_hien}</td>
                     </tr>
                 `;
 
@@ -137,11 +144,11 @@ async function loadLichSuVaBieuDo(ngayChon) {
     }
 }
 
+// Khi chọn ngày khác trên giao diện
 if (inputNgay) {
-    const today = new Date().toLocaleDateString('en-CA');
-    if(!inputNgay.value) inputNgay.value = today; // Chỉ set mặc định nếu trống
-    loadLichSuVaBieuDo(inputNgay.value);
-    inputNgay.addEventListener('change', (e) => { loadLichSuVaBieuDo(e.target.value); });
+    inputNgay.addEventListener('change', (e) => { 
+        loadLichSuVaBieuDo(e.target.value); 
+    });
 }
 
 // 3. LƯU GHI NHẬN NHIỆT ĐỘ
@@ -153,7 +160,9 @@ if (formDotLo) {
         btn.disabled = true;
         btn.innerText = "Đang lưu...";
 
+        // Gom thông tin mẻ hấp
         const thongTinMe = {
+            ngayDotLo: inputNgay.value,
             maLo: inputMaLo.value.trim(),
             soLuong: Number(inputSoLuong.value),
             thoiTiet: inputThoiTiet.value.trim(),
@@ -162,7 +171,7 @@ if (formDotLo) {
 
         try {
             await addDoc(collection(db, "nhat_ky_dot_lo"), {
-                ngay_dot: inputNgay.value,
+                ngay_dot: thongTinMe.ngayDotLo,
                 ma_lo: thongTinMe.maLo,
                 so_luong: thongTinMe.soLuong,
                 thoi_tiet: thongTinMe.thoiTiet,
@@ -182,13 +191,13 @@ if (formDotLo) {
                 thoi_gian: serverTimestamp()
             });
 
-            // Ghi nhớ mẻ hiện tại vào máy
+            // Ghi nhớ mẻ hiện tại vào máy và khóa form
             localStorage.setItem('ongoingBatch_DotLo', JSON.stringify(thongTinMe));
             thietLapTrangThaiMeHop(true, thongTinMe);
 
             alert("Ghi nhận nhiệt độ thành công!");
             
-            // Xóa trắng đồng hồ
+            // Chỉ xóa trắng các ô đồng hồ nhiệt độ
             for(let i=1; i<=4; i++) {
                 document.getElementById(`c1_${i}`).value = '';
                 document.getElementById(`c2_${i}`).value = '';
