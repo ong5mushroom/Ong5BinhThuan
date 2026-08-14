@@ -24,7 +24,7 @@
                     <li class="nav-item"><a class="nav-link text-white" href="sanxuat.html">Sản xuất</a></li>
                     <li class="nav-item"><a class="nav-link text-white" href="giong.html">Giống</a></li>
                     <li class="nav-item"><a class="nav-link text-white" href="dotlo.html">Đốt lò</a></li>
-                    <!-- Thẻ Báo cáo và Quản trị (Chỉ hiện cho Admin) -->
+                    <!-- Thẻ Báo cáo và Quản trị (Mặc định ẩn, JS sẽ tự mở cho Admin) -->
                     <li class="nav-item"><a class="nav-link text-white" href="baocao.html">Báo cáo</a></li>
                     <li class="nav-item"><a class="nav-link text-warning fw-bold" href="quantri.html" id="navQuanTri" style="display: none;">⚙️ Quản trị</a></li>
                 </ul>
@@ -37,7 +37,7 @@
     </nav>
 
     <div class="container mt-4">
-        <!-- Lời chào -->
+        <!-- Lời chào tự động lấy tên người đăng nhập -->
         <div class="alert alert-success border-0 shadow-sm border-start border-5 border-success mb-4">
             <h4 class="fw-bold text-success mb-2">Chào ngày mới, <span id="tenLoiChao">...</span>! ☀️</h4>
             <p class="mb-0">Chúc mọi người một ca làm việc hiệu quả và an toàn!</p>
@@ -62,59 +62,33 @@
                         <h5 class="fw-bold text-primary">📌 Bảng tin & Nhắc nhở</h5>
                     </div>
                     <div class="card-body">
-                        <div class="alert alert-warning small border-0">
-                            <strong>[Giám đốc]:</strong> Chuẩn bị xuống giống đợt Nấm Hương và Nấm Hầu Thủ mới trong tuần này. Tổ Giống chú ý kiểm tra phôi!
-                        </div>
-                        <div class="alert alert-info small border-0">
-                            <strong>[Hệ thống]:</strong> Lò sấy số 1 sẽ được bảo trì vào chiều mai (Thứ 6).
+                        
+                        <!-- Khu vực hiển thị tin nhắn (Có thanh cuộn) -->
+                        <div id="khuVucChat" style="max-height: 250px; overflow-y: auto; padding-right: 5px;">
+                            <div class="text-muted small text-center">Đang tải bảng tin...</div>
                         </div>
                         
-                   <!-- Khung nhập tin nhắn nhanh -->
-<div class="input-group mt-3">
-    <input type="text" class="form-control form-control-sm" id="inputChat" placeholder="Nhập ghi chú nhanh...">
-    <button class="btn btn-primary btn-sm" id="btnGuiChat">Gửi</button>
-</div>
+                        <!-- Khung nhập tin nhắn nhanh -->
+                        <div class="input-group mt-3">
+                            <input type="text" class="form-control form-control-sm" id="inputChat" placeholder="Nhập nhắc nhở (VD: Kiểm tra phôi)...">
+                            <button class="btn btn-primary btn-sm" id="btnGuiChat">Gửi</button>
+                        </div>
+                        
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Script Xử lý Logic Auth Guard (Bảo vệ trang) và Hiển thị -->
+    <!-- Script Đồng hồ kỹ thuật số -->
     <script>
-        // 1. Auth Guard: Kiểm tra xem đã đăng nhập chưa
-        const userStr = localStorage.getItem('currentUser');
-        
-        if (!userStr) {
-            // Nếu chưa đăng nhập, đá văng về trang login
-            window.location.href = 'login.html';
-        } else {
-            // 2. Nếu đã đăng nhập, lấy thông tin ra
-            const user = JSON.parse(userStr);
-            
-            // Cập nhật tên lên giao diện
-            document.getElementById('tenNhanVien').innerText = user.ten_hien_thi;
-            document.getElementById('tenLoiChao').innerText = user.ten_hien_thi;
-            
-            // 3. Phân quyền: Nếu là Giám Đốc (admin) thì mới hiện nút Quản trị
-            if (user.vai_tro === 'admin') {
-                document.getElementById('navQuanTri').style.display = 'block';
-            }
-        }
-
-        // 4. Chức năng Đăng xuất
-        document.getElementById('btnDangXuat').addEventListener('click', () => {
-            localStorage.removeItem('currentUser'); // Xóa trí nhớ trình duyệt
-            window.location.href = 'login.html'; // Đẩy về login
-        });
-
-        // 5. Đồng hồ
         setInterval(() => {
             const now = new Date();
             document.getElementById('clock').innerText = now.toLocaleTimeString('vi-VN', { hour12: false });
         }, 1000);
     </script>
     
+    <!-- Khai báo thư viện và file logic chính -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script type="module" src="js/main.js"></script>
 </body>
