@@ -1,110 +1,144 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đốt Lò - Nấm Ông 5</title>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css">
-    <!-- Thư viện vẽ biểu đồ Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-</head>
-<body class="bg-light">
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg custom-navbar">
-        <div class="container-fluid">
-            <a class="navbar-brand text-white fw-bold" href="index.html">🍄 Nấm Ông 5</a>
-            <div class="collapse navbar-collapse">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item"><a class="nav-link text-white" href="index.html">Trang chủ</a></li>
-                    <li class="nav-item"><a class="nav-link text-white" href="kho.html">Kho</a></li>
-                    <li class="nav-item"><a class="nav-link text-white" href="sanxuat.html">Sản xuất</a></li>
-                    <li class="nav-item"><a class="nav-link text-white" href="giong.html">Giống</a></li>
-                    <li class="nav-item"><a class="nav-link active text-white fw-bold" href="dotlo.html">Đốt lò</a></li>
-                    <li class="nav-item"><a class="nav-link text-white" href="baocao.html">Báo cáo</a></li>
-                    <li class="nav-item"><a class="nav-link text-warning fw-bold" href="quantri.html" id="navQuanTri" style="display: none;">⚙️ Quản trị</a></li>
-                </ul>
-            </div>
-        </div>
-    </nav>
+import { db } from '../firebase-config.js';
+import { collection, addDoc, getDocs, query, orderBy, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-    <div class="container mt-4">
-        <h3 class="fw-bold text-danger mb-4">🔥 Quản lý Đốt Lò Thanh Trùng</h3>
-        
-        <div class="row">
-            <!-- Form Ghi nhận Đốt Lò -->
-            <div class="col-md-5">
-                <div class="card shadow-sm border-0 mb-4 rounded-4">
-                    <div class="card-body p-4">
-                        <h5 class="fw-bold mb-3">Tạo Mẻ Đốt Lò Mới</h5>
-                        <form id="formDotLo">
-                            <div class="mb-3">
-                                <label class="form-label small fw-bold">Mẻ lò số / Tên mẻ</label>
-                                <input type="text" class="form-control form-control-sm" id="meLo" placeholder="VD: Mẻ 01 - Lò A" required>
-                            </div>
-                            
-                            <div class="mb-3 row">
-                                <div class="col-6">
-                                    <label class="form-label small fw-bold">Ngày đốt lò</label>
-                                    <input type="date" class="form-control form-control-sm" id="ngayDotLo" required>
-                                </div>
-                                <div class="col-6">
-                                    <label class="form-label small fw-bold text-danger">Số lượng phôi (bịch)</label>
-                                    <input type="number" class="form-control form-control-sm" id="soLuongPhoi" min="1" placeholder="Nhập số bịch..." required>
-                                </div>
-                            </div>
+// 1. Phân quyền
+const userStr = localStorage.getItem('currentUser');
+if (!userStr) window.location.href = 'login.html';
+const user = JSON.parse(userStr);
+if (user.vai_tro === 'admin') {
+    const navQuanTri = document.getElementById('navQuanTri');
+    if(navQuanTri) navQuanTri.style.display = 'block';
+}
 
-                            <!-- Khung liên kết tự động hiển thị Vật tư xuất trong ngày -->
-                            <div class="alert alert-secondary border-0 p-3 mb-4 rounded-3">
-                                <h6 class="fw-bold text-primary mb-2">🔄 Vật tư dùng cho mẻ này (Trong ngày)</h6>
-                                <ul class="list-group list-group-flush small rounded" id="bangVatTuXuatNgay">
-                                    <li class="list-group-item bg-transparent text-muted px-0">Vui lòng chọn ngày để tải dữ liệu...</li>
-                                </ul>
-                            </div>
+const inputNgay = document.getElementById('ngayDotLo');
+const khuVucHienThi = document.getElementById('bangVatTuXuatNgay');
 
-                            <button type="submit" class="btn btn-danger w-100 fw-bold shadow-sm" id="btnLuuDotLo">🔥 Ghi nhận Mẻ Lò</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
+// 2. LIÊN KẾT VẬT TƯ KHO TRONG NGÀY
+async function taiVatTuLienKet(ngayChon) {
+    if (!khuVucHienThi) return;
+    khuVucHienThi.innerHTML = '<li class="list-group-item bg-transparent text-muted px-0">Đang quét dữ liệu kho...</li>';
+    try {
+        const q = query(collection(db, "nhat_ky_kho"), where("loai_phieu", "==", "xuat"), where("ngay_thuc_hien", "==", ngayChon));
+        const snapshot = await getDocs(q);
 
-            <!-- Cột phải: Biểu đồ và Bảng Lịch sử -->
-            <div class="col-md-7">
-                <!-- Khu vực Biểu đồ -->
-                <div class="card shadow-sm border-0 rounded-4 mb-4">
-                    <div class="card-body p-4">
-                        <h5 class="fw-bold mb-3">📈 Biểu đồ Khối lượng (7 mẻ gần nhất)</h5>
-                        <canvas id="bieuDoDotLo" height="120"></canvas>
-                    </div>
-                </div>
+        if (snapshot.empty) {
+            khuVucHienThi.innerHTML = '<li class="list-group-item bg-transparent text-danger px-0">Chưa có phiếu xuất nguyên liệu (mùn cưa, cám...) nào trong ngày này.</li>';
+            return;
+        }
 
-                <!-- Bảng Thống kê Lịch sử -->
-                <div class="card shadow-sm border-0 rounded-4">
-                    <div class="card-body p-4">
-                        <h5 class="fw-bold mb-3">Lịch sử Đốt lò</h5>
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle small">
-                                <thead class="table-danger">
-                                    <tr>
-                                        <th>Ngày đốt</th>
-                                        <th>Mã Mẻ Lò</th>
-                                        <th>Tổng Phôi</th>
-                                        <th>Người thực hiện</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="bangDotLo">
-                                    <tr><td colspan="4" class="text-muted text-center">Đang tải dữ liệu...</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+        khuVucHienThi.innerHTML = '';
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            khuVucHienThi.innerHTML += `
+                <li class="list-group-item bg-transparent d-flex justify-content-between align-items-center px-0 py-1">
+                    <span class="fw-bold">${data.ten_vat_tu}</span>
+                    <span class="badge bg-danger rounded-pill">- ${data.so_luong} ${data.don_vi}</span>
+                </li>`;
+        });
+    } catch (error) {
+        khuVucHienThi.innerHTML = '<li class="list-group-item bg-transparent text-danger px-0">Lỗi kết nối cơ sở dữ liệu.</li>';
+    }
+}
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script type="module" src="js/modules/dotlo.js"></script>
-</body>
-</html>
+// Lắng nghe sự kiện đổi ngày
+if (inputNgay) {
+    const today = new Date().toLocaleDateString('en-CA');
+    inputNgay.value = today;
+    taiVatTuLienKet(today);
+    inputNgay.addEventListener('change', (e) => taiVatTuLienKet(e.target.value));
+}
+
+// 3. TẢI LỊCH SỬ & VẼ BIỂU ĐỒ
+let chartInstance = null;
+async function loadLichSuVaBieuDo() {
+    const bang = document.getElementById('bangDotLo');
+    try {
+        const q = query(collection(db, "nhat_ky_dot_lo"), orderBy("ngay_dot", "desc"));
+        const snapshot = await getDocs(q);
+
+        bang.innerHTML = '';
+        let labels = [];
+        let dataPhoi = [];
+
+        if(snapshot.empty) {
+            bang.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Chưa có dữ liệu đốt lò.</td></tr>';
+        } else {
+            snapshot.forEach(doc => {
+                const d = doc.data();
+                // Nạp dữ liệu vào bảng
+                bang.innerHTML += `
+                    <tr>
+                        <td class="text-muted">${d.ngay_dot}</td>
+                        <td class="fw-bold text-danger">${d.me_lo}</td>
+                        <td class="fw-bold">${d.so_luong_phoi}</td>
+                        <td>${d.nguoi_thuc_hien}</td>
+                    </tr>
+                `;
+                // Đẩy dữ liệu vào mảng cho biểu đồ (Đảo ngược để hiển thị từ cũ tới mới)
+                labels.unshift(d.me_lo + " (" + d.ngay_dot.slice(5) + ")");
+                dataPhoi.unshift(d.so_luong_phoi);
+            });
+        }
+
+        // Vẽ biểu đồ bằng Chart.js
+        const ctx = document.getElementById('bieuDoDotLo');
+        if(ctx) {
+            if(chartInstance) chartInstance.destroy(); // Xóa biểu đồ cũ nếu có
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels.slice(-7), // Chỉ lấy 7 mẻ gần nhất
+                    datasets: [{
+                        label: 'Số lượng phôi (bịch)',
+                        data: dataPhoi.slice(-7),
+                        backgroundColor: 'rgba(220, 53, 69, 0.7)',
+                        borderColor: 'rgba(220, 53, 69, 1)',
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+    } catch(e) { console.error(e); }
+}
+
+// 4. LƯU GHI NHẬN ĐỐT LÒ
+const formDotLo = document.getElementById('formDotLo');
+if (formDotLo) {
+    formDotLo.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('btnLuuDotLo');
+        btn.disabled = true;
+
+        try {
+            await addDoc(collection(db, "nhat_ky_dot_lo"), {
+                me_lo: document.getElementById('meLo').value.trim(),
+                ngay_dot: document.getElementById('ngayDotLo').value,
+                so_luong_phoi: Number(document.getElementById('soLuongPhoi').value),
+                nguoi_thuc_hien: user.ten_hien_thi,
+                ma_nv: user.ma_nv,
+                thoi_gian: serverTimestamp()
+            });
+            alert("Lưu mẻ lò thành công!");
+            formDotLo.reset();
+            
+            // Khôi phục ngày hiện tại và tải lại dữ liệu
+            const today = new Date().toLocaleDateString('en-CA');
+            inputNgay.value = today;
+            taiVatTuLienKet(today);
+            loadLichSuVaBieuDo();
+        } catch (error) {
+            console.error("Lỗi:", error);
+            alert("Có lỗi khi lưu!");
+        } finally {
+            btn.disabled = false;
+        }
+    });
+}
+
+// Chạy khởi tạo khi mở trang
+window.addEventListener('DOMContentLoaded', loadLichSuVaBieuDo);
