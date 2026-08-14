@@ -1,98 +1,132 @@
 import { db } from '../firebase-config.js';
-import { collection, addDoc, getDocs, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { collection, addDoc, getDocs, query, orderBy, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+// Phân quyền & Hiển thị Menu Admin
+const userStr = localStorage.getItem('currentUser');
+if (!userStr) window.location.href = 'login.html';
+const user = JSON.parse(userStr);
+if (user.vai_tro === 'admin') {
+    const navQuanTri = document.getElementById('navQuanTri');
+    if(navQuanTri) navQuanTri.style.display = 'block';
+}
 
 const sanXuatRef = collection(db, "san_xuat_log");
+const danhMucRef = collection(db, "danh_muc");
 
-// Hàm tải lịch sử sản xuất
+// Tải Danh mục Loại Nấm (Sản phẩm)
+async function loadDanhMucSanPham() {
+    const selectLoaiNam = document.getElementById('loaiNam');
+    try {
+        const q = query(danhMucRef, where("loai", "==", "san_pham"));
+        const snapshot = await getDocs(q);
+        
+        selectLoaiNam.innerHTML = '<option value="">-- Chọn Loại nấm --</option>';
+        if (snapshot.empty) {
+            selectLoaiNam.innerHTML = '<option value="">Chưa có danh mục Loại Nấm!</option>';
+            return;
+        }
+
+        snapshot.forEach(doc => {
+            selectLoaiNam.innerHTML += `<option value="${doc.data().ten}">${doc.data().ten}</option>`;
+        });
+    } catch (error) {
+        console.error("Lỗi tải danh mục:", error);
+    }
+}
+
+// Tải lịch sử Sản xuất
 async function loadLichSuSanXuat() {
-    const bangSanXuat = document.getElementById('bangSanXuat');
-    bangSanXuat.innerHTML = '';
+    const bang = document.getElementById('bangSanXuat');
+    bang.innerHTML = '';
 
     try {
-        // Lấy dữ liệu sắp xếp theo thời gian mới nhất
         const q = query(sanXuatRef, orderBy("thoi_gian", "desc"));
         const querySnapshot = await getDocs(q);
-
+        
         if (querySnapshot.empty) {
-            bangSanXuat.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Chưa có dữ liệu sản xuất.</td></tr>';
+            bang.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Chưa có lịch sử sản xuất.</td></tr>';
             return;
         }
 
         querySnapshot.forEach((docSnap) => {
             const data = docSnap.data();
-            const date = data.thoi_gian ? data.thoi_gian.toDate().toLocaleDateString('vi-VN') : 'N/A';
+            const dateStr = data.thoi_gian ? data.thoi_gian.toDate().toLocaleDateString('vi-VN') : '';
             
-            // Cảnh báo nếu tỷ lệ hư hỏng > 5%
-            const tyLeHuClass = data.tyle_hu > 5 ? 'text-danger fw-bold' : 'text-success';
+            let colorTiLe = "text-success";
+            if (data.tyle_hu > 5 && data.tyle_hu <= 10) colorTiLe = "text-warning";
+            if (data.tyle_hu > 10) colorTiLe = "text-danger fw-bold";
 
-            bangSanXuat.innerHTML += `
+            bang.innerHTML += `
                 <tr>
-                    <td>${date}</td>
+                    <td class="small text-muted">${dateStr}</td>
                     <td class="fw-bold">${data.loai_nam}</td>
-                    <td>${data.tong_phoi}</td>
-                    <td class="text-success fw-bold">${data.phoi_dat}</td>
-                    <td class="text-danger">${data.phoi_hu}</td>
-                    <td class="${tyLeHuClass}">${data.tyle_hu.toFixed(2)}%</td>
+                    <td><b>${data.tong_phoi}</b> bịch</td>
+                    <td class="${colorTiLe}">${data.tyle_hu.toFixed(2)}%</td>
                 </tr>
             `;
         });
     } catch (error) {
-        console.error("Lỗi khi tải dữ liệu sản xuất: ", error);
-        bangSanXuat.innerHTML = '<tr><td colspan="6" class="text-danger">Lỗi kết nối cơ sở dữ liệu.</td></tr>';
+        console.error("Lỗi:", error);
+        bang.innerHTML = '<tr><td colspan="4" class="text-danger text-center">Lỗi kết nối cơ sở dữ liệu.</td></tr>';
     }
 }
 
-// Xử lý lưu lô mới
-document.getElementById('formSanXuat').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const btnLuu = document.getElementById('btnLuuLo');
-    btnLuu.disabled = true;
-    btnLuu.innerText = "Đang lưu...";
+// Xử lý Ghi nhận Sản xuất
+const formSanXuat = document.getElementById('formSanXuat');
+if (formSanXuat) {
+    formSanXuat.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btnLuu = document.getElementById('btnLuuSanXuat');
+        btnLuu.disabled = true;
+        btnLuu.innerText = "Đang lưu...";
 
-    const loaiNam = document.getElementById('loaiNam').value;
-    const tongPhoi = parseInt(document.getElementById('tongPhoi').value);
-    const phoiDat = parseInt(document.getElementById('phoiDat').value);
-    const phoiHu = parseInt(document.getElementById('phoiHu').value);
-    const phoiTanDung = parseInt(document.getElementById('phoiTanDung').value);
+        const tongPhoi = Number(document.getElementById('tongPhoi').value);
+        const phoiDat = Number(document.getElementById('phoiDat').value);
+        const phoiHu = Number(document.getElementById('phoiHu').value);
+        const phoiTanDung = Number(document.getElementById('phoiTanDung').value);
+        const loaiNam = document.getElementById('loaiNam').value;
 
-    // Kiểm tra logic cơ bản
-    if (phoiDat + phoiHu + phoiTanDung !== tongPhoi) {
-        alert("Lỗi: Tổng số phôi Đạt + Hư + Tận dụng phải bằng Tổng số phôi thực hiện!");
-        btnLuu.disabled = false;
-        btnLuu.innerText = "Lưu & Tính tỷ lệ";
-        return;
-    }
+        if (!loaiNam) {
+            alert("Vui lòng chọn loại nấm!");
+            btnLuu.disabled = false;
+            btnLuu.innerText = "Lưu Nhật Ký";
+            return;
+        }
 
-    // Tính tỷ lệ hư hỏng
-    const tyLeHu = (phoiHu / tongPhoi) * 100;
+        if (phoiDat + phoiHu + phoiTanDung !== tongPhoi) {
+            alert("Lỗi: Tổng phôi Đạt + Hư + Tận dụng phải bằng Tổng phôi làm ra!");
+            btnLuu.disabled = false;
+            btnLuu.innerText = "Lưu Nhật Ký";
+            return;
+        }
 
-    try {
-        await addDoc(sanXuatRef, {
-            loai_nam: loaiNam,
-            tong_phoi: tongPhoi,
-            phoi_dat: phoiDat,
-            phoi_hu: phoiHu,
-            phoi_tan_dung: phoiTanDung,
-            tyle_hu: tyLeHu,
-            nguoi_thuc_hien: "nv_001", // Tạm gán
-            thoi_gian: serverTimestamp()
-        });
+        const tyleHu = (phoiHu / tongPhoi) * 100;
 
-        alert(`Lưu thành công! Tỷ lệ hư hỏng của lô này là ${tyLeHu.toFixed(2)}%`);
-        document.getElementById('formSanXuat').reset();
-        
-        // Tải lại bảng ngay lập tức
-        loadLichSuSanXuat();
+        try {
+            await addDoc(sanXuatRef, {
+                loai_nam: loaiNam,
+                tong_phoi: tongPhoi,
+                phoi_dat: phoiDat,
+                phoi_hu: phoiHu,
+                phoi_tan_dung: phoiTanDung,
+                tyle_hu: tyleHu,
+                nguoi_thuc_hien: user.ten_hien_thi,
+                thoi_gian: serverTimestamp()
+            });
+            formSanXuat.reset();
+            loadLichSuSanXuat();
+        } catch (error) {
+            console.error("Lỗi:", error);
+            alert("Có lỗi xảy ra khi lưu!");
+        } finally {
+            btnLuu.disabled = false;
+            btnLuu.innerText = "Lưu Nhật Ký";
+        }
+    });
+}
 
-    } catch (error) {
-        console.error("Lỗi khi lưu: ", error);
-        alert("Có lỗi xảy ra, không thể lưu.");
-    } finally {
-        btnLuu.disabled = false;
-        btnLuu.innerText = "Lưu & Tính tỷ lệ";
-    }
+// Chạy hàm khi mở trang
+window.addEventListener('DOMContentLoaded', () => {
+    loadDanhMucSanPham();
+    loadLichSuSanXuat();
 });
-
-// Chạy hàm load khi mở trang
-window.onload = loadLichSuSanXuat;
