@@ -1,129 +1,106 @@
 import { db } from '../firebase-config.js';
-import { collection, addDoc, getDocs, query, orderBy, serverTimestamp, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { collection, addDoc, getDocs, deleteDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+// Xác thực Admin
+const userStr = localStorage.getItem('currentUser');
+if (!userStr) window.location.href = 'login.html';
+const user = JSON.parse(userStr);
+if (user.vai_tro !== 'admin') {
+    alert("Chỉ Giám Đốc mới có quyền truy cập trang này!");
+    window.location.href = 'index.html';
+}
 
 const usersRef = collection(db, "users");
-const donTuRef = collection(db, "don_tu");
+const danhMucRef = collection(db, "danh_muc");
 
-// Tải danh sách nhân viên
+// --- 1. QUẢN LÝ NHÂN VIÊN ---
 async function loadNhanVien() {
     const bang = document.getElementById('bangNhanVien');
     bang.innerHTML = '';
-
     try {
         const querySnapshot = await getDocs(usersRef);
-        if (querySnapshot.empty) {
-            bang.innerHTML = '<tr><td colspan="5" class="text-center">Chưa có nhân sự nào.</td></tr>';
-            return;
-        }
-
         querySnapshot.forEach((docSnap) => {
             const data = docSnap.data();
-            const id = docSnap.id;
-            
-            // Format màu sắc quyền hạn
             let roleBadge = 'bg-secondary';
-            let roleText = 'Nhân viên';
-            if(data.vai_tro === 'admin') { roleBadge = 'bg-danger'; roleText = 'Admin'; }
-            if(data.vai_tro === 'to_truong') { roleBadge = 'bg-success'; roleText = 'Tổ trưởng'; }
-            if(data.vai_tro === 'to_giong') { roleBadge = 'bg-warning text-dark'; roleText = 'Tổ Giống'; }
-
+            if(data.vai_tro === 'admin') roleBadge = 'bg-danger';
+            
             bang.innerHTML += `
                 <tr>
                     <td class="fw-bold">${data.ma_nv}</td>
                     <td>${data.ten_hien_thi}</td>
-                    <td><span class="badge ${roleBadge}">${roleText}</span></td>
-                    <td><span class="text-success">Đang làm việc</span></td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-danger" onclick="xoaNhanVien('${id}')">Xóa</button>
-                    </td>
-                </tr>
-            `;
+                    <td>${data.mat_khau}</td>
+                    <td><span class="badge ${roleBadge}">${data.vai_tro}</span></td>
+                    <td><button class="btn btn-sm btn-outline-danger" onclick="xoaDuLieu('users', '${docSnap.id}')">Xóa</button></td>
+                </tr>`;
         });
-    } catch (error) {
-        console.error("Lỗi tải nhân viên: ", error);
-        bang.innerHTML = '<tr><td colspan="5" class="text-danger">Lỗi kết nối CSDL</td></tr>';
-    }
+    } catch (error) { console.error(error); }
 }
 
-// Hàm Xóa nhân viên (Gắn vào window để gọi từ HTML nội tuyến)
-window.xoaNhanVien = async function(docId) {
-    if(confirm("Bạn có chắc chắn muốn xóa nhân viên này khỏi hệ thống?")) {
-        try {
-            await deleteDoc(doc(db, "users", docId));
-            alert("Đã xóa nhân viên!");
-            loadNhanVien();
-        } catch (error) {
-            console.error("Lỗi xóa:", error);
-            alert("Không thể xóa. Vui lòng kiểm tra quyền.");
-        }
-    }
-}
-
-// Xử lý tạo nhân viên mới
 document.getElementById('formNhanVien').addEventListener('submit', async (e) => {
     e.preventDefault();
     const btn = document.getElementById('btnLuuNV');
     btn.disabled = true;
-
     try {
         await addDoc(usersRef, {
             ma_nv: document.getElementById('maNV').value.trim(),
             ten_hien_thi: document.getElementById('tenNV').value.trim(),
             vai_tro: document.getElementById('quyenNV').value,
-            mat_khau: document.getElementById('matKhau').value, // Thực tế nên dùng Firebase Auth thay vì lưu plain text
-            ngay_tao: serverTimestamp()
+            mat_khau: document.getElementById('matKhau').value
         });
-
-        alert("Đã tạo tài khoản thành công!");
         document.getElementById('formNhanVien').reset();
         bootstrap.Modal.getInstance(document.getElementById('modalNhanVien')).hide();
         loadNhanVien();
-    } catch (error) {
-        console.error("Lỗi tạo tài khoản:", error);
-    } finally {
-        btn.disabled = false;
-    }
+    } catch (error) { console.error(error); } finally { btn.disabled = false; }
 });
 
-// Tải danh sách đơn từ / đề xuất
-async function loadDonTu() {
-    const bang = document.getElementById('bangDonTu');
+
+// --- 2. QUẢN LÝ DANH MỤC ---
+async function loadDanhMuc() {
+    const bang = document.getElementById('bangDanhMuc');
     bang.innerHTML = '';
-
     try {
-        const q = query(donTuRef, orderBy("thoi_gian", "desc"));
-        const querySnapshot = await getDocs(q);
-        
-        if (querySnapshot.empty) {
-            bang.innerHTML = '<tr><td colspan="4" class="text-center">Không có đề xuất nào.</td></tr>';
-            return;
-        }
-
+        const querySnapshot = await getDocs(danhMucRef);
         querySnapshot.forEach((docSnap) => {
             const data = docSnap.data();
-            const dateStr = data.thoi_gian ? data.thoi_gian.toDate().toLocaleDateString('vi-VN') : '';
-            
+            let tenLoai = "";
+            if(data.loai === "vat_tu") tenLoai = '<span class="text-primary fw-bold">Vật tư</span>';
+            if(data.loai === "san_pham") tenLoai = '<span class="text-success fw-bold">Loại Nấm</span>';
+            if(data.loai === "giai_doan") tenLoai = '<span class="text-warning fw-bold">Giai đoạn</span>';
+
             bang.innerHTML += `
                 <tr>
-                    <td>${dateStr}</td>
-                    <td class="fw-bold">${data.nguoi_gui}</td>
-                    <td><span class="badge bg-info text-dark">${data.loai_don}</span></td>
-                    <td>${data.noi_dung}</td>
-                </tr>
-            `;
+                    <td>${tenLoai}</td>
+                    <td class="fw-bold">${data.ten}</td>
+                    <td><button class="btn btn-sm btn-outline-danger" onclick="xoaDuLieu('danh_muc', '${docSnap.id}')">Xóa</button></td>
+                </tr>`;
         });
-    } catch (error) {
-        console.error("Lỗi tải đơn từ:", error);
+    } catch (error) { console.error(error); }
+}
+
+document.getElementById('formDanhMuc').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('btnLuuDanhMuc');
+    btn.disabled = true;
+    try {
+        await addDoc(danhMucRef, {
+            loai: document.getElementById('loaiDanhMuc').value,
+            ten: document.getElementById('tenDanhMuc').value.trim(),
+            ngay_tao: serverTimestamp()
+        });
+        document.getElementById('tenDanhMuc').value = '';
+        loadDanhMuc();
+    } catch (error) { console.error(error); } finally { btn.disabled = false; }
+});
+
+// Hàm xóa dùng chung gắn vào window
+window.xoaDuLieu = async function(collectionName, docId) {
+    if(confirm("Bạn có chắc chắn muốn xóa dữ liệu này?")) {
+        try {
+            await deleteDoc(doc(db, collectionName, docId));
+            if(collectionName === 'users') loadNhanVien();
+            if(collectionName === 'danh_muc') loadDanhMuc();
+        } catch (error) { alert("Lỗi khi xóa!"); }
     }
 }
 
-// Khởi chạy khi tải trang
-window.onload = () => {
-    loadNhanVien();
-    loadDonTu();
-};
-
-// Chức năng xuất Excel (Mô phỏng báo cáo chấm công)
-document.getElementById('btnXuatChamCong').addEventListener('click', () => {
-    alert("Chức năng kết xuất dữ liệu chấm công ra file Excel/CSV đang được chuẩn bị!");
-});
+window.onload = () => { loadNhanVien(); loadDanhMuc(); };
