@@ -1,7 +1,7 @@
 import { db } from '../firebase-config.js';
 import { collection, addDoc, getDocs, query, orderBy, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-// 1. Phân quyền
+// Phân quyền
 const userStr = localStorage.getItem('currentUser');
 if (!userStr) window.location.href = 'login.html';
 const user = JSON.parse(userStr);
@@ -11,111 +11,113 @@ if (user.vai_tro === 'admin') {
 }
 
 const inputNgay = document.getElementById('ngayDotLo');
-const khuVucHienThi = document.getElementById('bangVatTuXuatNgay');
-
-// 2. LIÊN KẾT VẬT TƯ KHO TRONG NGÀY
-async function taiVatTuLienKet(ngayChon) {
-    if (!khuVucHienThi) return;
-    khuVucHienThi.innerHTML = '<li class="list-group-item bg-transparent text-muted px-0">Đang quét dữ liệu kho...</li>';
-    try {
-        const q = query(collection(db, "nhat_ky_kho"), where("loai_phieu", "==", "xuat"), where("ngay_thuc_hien", "==", ngayChon));
-        const snapshot = await getDocs(q);
-
-        if (snapshot.empty) {
-            khuVucHienThi.innerHTML = '<li class="list-group-item bg-transparent text-danger px-0">Chưa có phiếu xuất nguyên liệu (mùn cưa, cám...) nào trong ngày này.</li>';
-            return;
-        }
-
-        khuVucHienThi.innerHTML = '';
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            khuVucHienThi.innerHTML += `
-                <li class="list-group-item bg-transparent d-flex justify-content-between align-items-center px-0 py-1">
-                    <span class="fw-bold">${data.ten_vat_tu}</span>
-                    <span class="badge bg-danger rounded-pill">- ${data.so_luong} ${data.don_vi}</span>
-                </li>`;
-        });
-    } catch (error) {
-        khuVucHienThi.innerHTML = '<li class="list-group-item bg-transparent text-danger px-0">Lỗi kết nối cơ sở dữ liệu.</li>';
-    }
-}
-
-// Lắng nghe sự kiện đổi ngày
-if (inputNgay) {
-    const today = new Date().toLocaleDateString('en-CA');
-    inputNgay.value = today;
-    taiVatTuLienKet(today);
-    inputNgay.addEventListener('change', (e) => taiVatTuLienKet(e.target.value));
-}
-
-// 3. TẢI LỊCH SỬ & VẼ BIỂU ĐỒ NHIỆT ĐỘ
 let chartInstance = null;
-async function loadLichSuVaBieuDo() {
-    const bang = document.getElementById('bangDotLo');
+
+// Hàm tải lịch sử và vẽ biểu đồ THEO NGÀY ĐANG CHỌN
+async function loadLichSuVaBieuDo(ngayChon) {
+    const bang = document.getElementById('bangLichSuNhietDo');
+    if (!bang) return;
+
     try {
-        const q = query(collection(db, "nhat_ky_dot_lo"), orderBy("ngay_dot", "desc"));
+        const q = query(
+            collection(db, "nhat_ky_dot_lo"), 
+            where("ngay_dot", "==", ngayChon),
+            orderBy("thoi_gian", "asc") // Xếp theo giờ tăng dần để vẽ biểu đồ
+        );
         const snapshot = await getDocs(q);
 
         bang.innerHTML = '';
-        let labels = [];
-        let dataNhietDo = [];
+        let labelsGio = [];
+        let dataCont1 = [];
+        let dataCont2 = [];
 
         if(snapshot.empty) {
-            bang.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Chưa có dữ liệu đốt lò.</td></tr>';
+            bang.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Chưa có dữ liệu nhiệt độ trong ngày này.</td></tr>';
         } else {
             snapshot.forEach(doc => {
                 const d = doc.data();
-                const nhietDoHienThi = d.nhiet_do ? `${d.nhiet_do}°C` : 'N/A';
                 
-                // Nạp dữ liệu vào bảng
+                // Trích xuất giờ ghi nhận từ serverTimestamp
+                let gioGhi = "N/A";
+                if(d.thoi_gian) {
+                    const dateObj = d.thoi_gian.toDate();
+                    gioGhi = dateObj.getHours() + ":" + String(dateObj.getMinutes()).padStart(2, '0');
+                }
+
+                // Tính trung bình cộng nhiệt độ Container 1
+                let tbC1 = (d.c1_1 + d.c1_2 + d.c1_3 + d.c1_4) / 4 || 0;
+                // Tính trung bình cộng nhiệt độ Container 2
+                let tbC2 = (d.c2_1 + d.c2_2 + d.c2_3 + d.c2_4) / 4 || 0;
+
                 bang.innerHTML += `
                     <tr>
-                        <td class="text-muted">${d.ngay_dot}</td>
-                        <td class="fw-bold text-danger">${d.me_lo}</td>
-                        <td class="fw-bold">${d.so_luong_phoi}</td>
-                        <td class="fw-bold text-warning">${nhietDoHienThi}</td>
+                        <td class="fw-bold">${gioGhi}</td>
+                        <td>${d.ma_lo}</td>
+                        <td class="text-primary fw-bold">${tbC1.toFixed(1)}°C</td>
+                        <td class="text-warning fw-bold">${tbC2.toFixed(1)}°C</td>
+                        <td class="text-muted">${d.nguoi_thuc_hien}</td>
                     </tr>
                 `;
-                // Đẩy dữ liệu vào mảng cho biểu đồ (Đảo ngược để hiển thị từ cũ tới mới)
-                labels.unshift(d.me_lo + " (" + d.ngay_dot.slice(5) + ")");
-                dataNhietDo.unshift(d.nhiet_do || 0); // Lấy nhiệt độ, nếu không có thì để 0
+
+                labelsGio.push(gioGhi);
+                dataCont1.push(tbC1);
+                dataCont2.push(tbC2);
             });
         }
 
-        // Vẽ biểu đồ Đường (Line Chart) thể hiện Nhiệt độ
-        const ctx = document.getElementById('bieuDoDotLo');
+        // Vẽ biểu đồ Đường
+        const ctx = document.getElementById('bieuDoNhietDo');
         if(ctx) {
-            if(chartInstance) chartInstance.destroy(); // Xóa biểu đồ cũ nếu có
+            if(chartInstance) chartInstance.destroy();
             chartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: labels.slice(-7), // Chỉ lấy 7 mẻ gần nhất
-                    datasets: [{
-                        label: 'Nhiệt độ (°C)',
-                        data: dataNhietDo.slice(-7),
-                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                        borderColor: 'rgba(255, 99, 132, 1)',
-                        borderWidth: 2,
-                        tension: 0.3, // Tạo đường cong mềm mại
-                        fill: true,
-                        pointBackgroundColor: 'rgba(255, 99, 132, 1)',
-                        pointRadius: 4
-                    }]
+                    labels: labelsGio,
+                    datasets: [
+                        {
+                            label: 'TB Container 1 (°C)',
+                            data: dataCont1,
+                            borderColor: '#0d6efd', // Màu xanh Primary
+                            backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.3,
+                            fill: true
+                        },
+                        {
+                            label: 'TB Container 2 (°C)',
+                            data: dataCont2,
+                            borderColor: '#ffc107', // Màu vàng Warning
+                            backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.3,
+                            fill: true
+                        }
+                    ]
                 },
                 options: {
                     responsive: true,
                     scales: { 
-                        y: { 
-                            beginAtZero: false // Không bắt đầu từ 0 để đồ thị dao động nhiệt nhìn rõ hơn
-                        } 
+                        y: { beginAtZero: false } 
                     }
                 }
             });
         }
-    } catch(e) { console.error(e); }
+    } catch(e) { console.error("Lỗi vẽ biểu đồ:", e); }
 }
 
-// 4. LƯU GHI NHẬN ĐỐT LÒ
+// Khởi tạo ngày hôm nay và gọi dữ liệu
+if (inputNgay) {
+    const today = new Date().toLocaleDateString('en-CA');
+    inputNgay.value = today;
+    loadLichSuVaBieuDo(today);
+
+    // Khi người dùng đổi ngày, tải lại biểu đồ của ngày đó
+    inputNgay.addEventListener('change', (e) => {
+        loadLichSuVaBieuDo(e.target.value);
+    });
+}
+
+// Lưu Ghi nhận
 const formDotLo = document.getElementById('formDotLo');
 if (formDotLo) {
     formDotLo.addEventListener('submit', async (e) => {
@@ -125,22 +127,39 @@ if (formDotLo) {
 
         try {
             await addDoc(collection(db, "nhat_ky_dot_lo"), {
-                me_lo: document.getElementById('meLo').value.trim(),
                 ngay_dot: document.getElementById('ngayDotLo').value,
-                so_luong_phoi: Number(document.getElementById('soLuongPhoi').value),
-                nhiet_do: Number(document.getElementById('nhietDo').value), // Lưu thêm Nhiệt độ
+                ma_lo: document.getElementById('maLo').value.trim(),
+                so_luong: Number(document.getElementById('soLuong').value),
+                thoi_tiet: document.getElementById('thoiTiet').value.trim(),
+                loai_cui: document.getElementById('loaiCui').value.trim(),
+                
+                // Dữ liệu 4 đồng hồ Container 1
+                c1_1: Number(document.getElementById('c1_1').value) || 0,
+                c1_2: Number(document.getElementById('c1_2').value) || 0,
+                c1_3: Number(document.getElementById('c1_3').value) || 0,
+                c1_4: Number(document.getElementById('c1_4').value) || 0,
+
+                // Dữ liệu 4 đồng hồ Container 2
+                c2_1: Number(document.getElementById('c2_1').value) || 0,
+                c2_2: Number(document.getElementById('c2_2').value) || 0,
+                c2_3: Number(document.getElementById('c2_3').value) || 0,
+                c2_4: Number(document.getElementById('c2_4').value) || 0,
+
                 nguoi_thuc_hien: user.ten_hien_thi,
-                ma_nv: user.ma_nv,
                 thoi_gian: serverTimestamp()
             });
-            alert("Lưu mẻ lò thành công!");
-            formDotLo.reset();
+
+            alert("Ghi nhận nhiệt độ thành công!");
             
-            // Khôi phục ngày hiện tại và tải lại dữ liệu
-            const today = new Date().toLocaleDateString('en-CA');
-            inputNgay.value = today;
-            taiVatTuLienKet(today);
-            loadLichSuVaBieuDo();
+            // Chỉ xóa các ô nhiệt độ, giữ nguyên Mã Lô, Ngày, Số lượng để nhập giờ tiếp theo cho nhanh
+            document.getElementById('c1_1').value = ''; document.getElementById('c1_2').value = '';
+            document.getElementById('c1_3').value = ''; document.getElementById('c1_4').value = '';
+            document.getElementById('c2_1').value = ''; document.getElementById('c2_2').value = '';
+            document.getElementById('c2_3').value = ''; document.getElementById('c2_4').value = '';
+
+            // Tải lại biểu đồ
+            loadLichSuVaBieuDo(document.getElementById('ngayDotLo').value);
+            
         } catch (error) {
             console.error("Lỗi:", error);
             alert("Có lỗi khi lưu!");
@@ -149,6 +168,3 @@ if (formDotLo) {
         }
     });
 }
-
-// Chạy khởi tạo khi mở trang
-window.addEventListener('DOMContentLoaded', loadLichSuVaBieuDo);
