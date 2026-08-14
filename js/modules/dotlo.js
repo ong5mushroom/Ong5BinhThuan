@@ -48,7 +48,7 @@ if (inputNgay) {
     inputNgay.addEventListener('change', (e) => taiVatTuLienKet(e.target.value));
 }
 
-// 3. TẢI LỊCH SỬ & VẼ BIỂU ĐỒ
+// 3. TẢI LỊCH SỬ & VẼ BIỂU ĐỒ NHIỆT ĐỘ
 let chartInstance = null;
 async function loadLichSuVaBieuDo() {
     const bang = document.getElementById('bangDotLo');
@@ -58,48 +58,57 @@ async function loadLichSuVaBieuDo() {
 
         bang.innerHTML = '';
         let labels = [];
-        let dataPhoi = [];
+        let dataNhietDo = [];
 
         if(snapshot.empty) {
             bang.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Chưa có dữ liệu đốt lò.</td></tr>';
         } else {
             snapshot.forEach(doc => {
                 const d = doc.data();
+                const nhietDoHienThi = d.nhiet_do ? `${d.nhiet_do}°C` : 'N/A';
+                
                 // Nạp dữ liệu vào bảng
                 bang.innerHTML += `
                     <tr>
                         <td class="text-muted">${d.ngay_dot}</td>
                         <td class="fw-bold text-danger">${d.me_lo}</td>
                         <td class="fw-bold">${d.so_luong_phoi}</td>
-                        <td>${d.nguoi_thuc_hien}</td>
+                        <td class="fw-bold text-warning">${nhietDoHienThi}</td>
                     </tr>
                 `;
                 // Đẩy dữ liệu vào mảng cho biểu đồ (Đảo ngược để hiển thị từ cũ tới mới)
                 labels.unshift(d.me_lo + " (" + d.ngay_dot.slice(5) + ")");
-                dataPhoi.unshift(d.so_luong_phoi);
+                dataNhietDo.unshift(d.nhiet_do || 0); // Lấy nhiệt độ, nếu không có thì để 0
             });
         }
 
-        // Vẽ biểu đồ bằng Chart.js
+        // Vẽ biểu đồ Đường (Line Chart) thể hiện Nhiệt độ
         const ctx = document.getElementById('bieuDoDotLo');
         if(ctx) {
             if(chartInstance) chartInstance.destroy(); // Xóa biểu đồ cũ nếu có
             chartInstance = new Chart(ctx, {
-                type: 'bar',
+                type: 'line',
                 data: {
                     labels: labels.slice(-7), // Chỉ lấy 7 mẻ gần nhất
                     datasets: [{
-                        label: 'Số lượng phôi (bịch)',
-                        data: dataPhoi.slice(-7),
-                        backgroundColor: 'rgba(220, 53, 69, 0.7)',
-                        borderColor: 'rgba(220, 53, 69, 1)',
-                        borderWidth: 1,
-                        borderRadius: 4
+                        label: 'Nhiệt độ (°C)',
+                        data: dataNhietDo.slice(-7),
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        borderWidth: 2,
+                        tension: 0.3, // Tạo đường cong mềm mại
+                        fill: true,
+                        pointBackgroundColor: 'rgba(255, 99, 132, 1)',
+                        pointRadius: 4
                     }]
                 },
                 options: {
                     responsive: true,
-                    scales: { y: { beginAtZero: true } }
+                    scales: { 
+                        y: { 
+                            beginAtZero: false // Không bắt đầu từ 0 để đồ thị dao động nhiệt nhìn rõ hơn
+                        } 
+                    }
                 }
             });
         }
@@ -119,6 +128,7 @@ if (formDotLo) {
                 me_lo: document.getElementById('meLo').value.trim(),
                 ngay_dot: document.getElementById('ngayDotLo').value,
                 so_luong_phoi: Number(document.getElementById('soLuongPhoi').value),
+                nhiet_do: Number(document.getElementById('nhietDo').value), // Lưu thêm Nhiệt độ
                 nguoi_thuc_hien: user.ten_hien_thi,
                 ma_nv: user.ma_nv,
                 thoi_gian: serverTimestamp()
