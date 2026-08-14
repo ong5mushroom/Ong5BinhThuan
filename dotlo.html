@@ -44,14 +44,19 @@
                                 <input type="text" class="form-control form-control-sm" id="meLo" placeholder="VD: Mẻ 01 - Lò A" required>
                             </div>
                             
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Ngày đốt lò</label>
+                                <input type="date" class="form-control form-control-sm" id="ngayDotLo" required>
+                            </div>
+
                             <div class="mb-3 row">
                                 <div class="col-6">
-                                    <label class="form-label small fw-bold">Ngày đốt lò</label>
-                                    <input type="date" class="form-control form-control-sm" id="ngayDotLo" required>
+                                    <label class="form-label small fw-bold text-secondary">Số lượng phôi (bịch)</label>
+                                    <input type="number" class="form-control form-control-sm" id="soLuongPhoi" min="1" placeholder="Nhập số bịch..." required>
                                 </div>
                                 <div class="col-6">
-                                    <label class="form-label small fw-bold text-danger">Số lượng phôi (bịch)</label>
-                                    <input type="number" class="form-control form-control-sm" id="soLuongPhoi" min="1" placeholder="Nhập số bịch..." required>
+                                    <label class="form-label small fw-bold text-danger">Nhiệt độ đạt (°C)</label>
+                                    <input type="number" class="form-control form-control-sm border-danger text-danger fw-bold" id="nhietDo" min="1" placeholder="VD: 100" required>
                                 </div>
                             </div>
 
@@ -74,7 +79,7 @@
                 <!-- Khu vực Biểu đồ -->
                 <div class="card shadow-sm border-0 rounded-4 mb-4">
                     <div class="card-body p-4">
-                        <h5 class="fw-bold mb-3">📈 Biểu đồ Khối lượng (7 mẻ gần nhất)</h5>
+                        <h5 class="fw-bold mb-3">📈 Biểu đồ Nhiệt độ (7 mẻ gần nhất)</h5>
                         <canvas id="bieuDoDotLo" height="120"></canvas>
                     </div>
                 </div>
@@ -90,7 +95,7 @@
                                         <th>Ngày đốt</th>
                                         <th>Mã Mẻ Lò</th>
                                         <th>Tổng Phôi</th>
-                                        <th>Người thực hiện</th>
+                                        <th>Nhiệt độ</th>
                                     </tr>
                                 </thead>
                                 <tbody id="bangDotLo">
