@@ -1,113 +1,145 @@
 import { db } from '../firebase-config.js';
-import { collection, getDocs, doc, updateDoc, addDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { collection, addDoc, getDocs, doc, setDoc, getDoc, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-const khoRef = collection(db, "kho_vat_tu");
-const giaoDichRef = collection(db, "kho_giao_dich");
+// Phân quyền
+const userStr = localStorage.getItem('currentUser');
+if (!userStr) window.location.href = 'login.html';
+const user = JSON.parse(userStr);
 
-// Hàm tải dữ liệu tồn kho lên bảng và lên thẻ Select trong Modal
-async function loadKho() {
+const nhatKyRef = collection(db, "nhat_ky_kho");
+const tonKhoRef = collection(db, "kho_vat_tu");
+const danhMucRef = collection(db, "danh_muc");
+
+// 1. TẢI DANH MỤC VẬT TƯ CHO MENU DROPDOWN
+async function loadDanhMucVatTu() {
+    const selectVatTu = document.getElementById('tenVatTu');
+    try {
+        const q = query(danhMucRef, where("loai", "==", "vat_tu"));
+        const snapshot = await getDocs(q);
+        
+        selectVatTu.innerHTML = '<option value="">-- Chọn vật tư --</option>';
+        if (snapshot.empty) {
+            selectVatTu.innerHTML = '<option value="">Giám đốc chưa tạo mã vật tư nào!</option>';
+            return;
+        }
+
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            selectVatTu.innerHTML += `<option value="${data.ten}">${data.ten}</option>`;
+        });
+    } catch (error) {
+        console.error("Lỗi tải danh mục:", error);
+    }
+}
+
+// 2. TẢI BẢNG TỒN KHO HIỆN TẠI
+async function loadTonKho() {
     const bangTonKho = document.getElementById('bangTonKho');
-    const chonVatTu = document.getElementById('chonVatTu');
-    
     bangTonKho.innerHTML = '';
-    chonVatTu.innerHTML = '<option value="">-- Chọn vật tư --</option>';
 
     try {
-        const querySnapshot = await getDocs(khoRef);
+        const querySnapshot = await getDocs(tonKhoRef);
         if (querySnapshot.empty) {
-            bangTonKho.innerHTML = '<tr><td colspan="4" class="text-center">Chưa có vật tư trong kho. Xin hãy thêm trên Firebase.</td></tr>';
+            bangTonKho.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Kho đang trống.</td></tr>';
             return;
         }
 
         querySnapshot.forEach((docSnap) => {
             const data = docSnap.data();
-            const docId = docSnap.id; // Dùng Document ID của Firestore làm khóa
-
-            // Render bảng
             bangTonKho.innerHTML += `
                 <tr>
-                    <td class="fw-bold text-secondary">${data.ma_vat_tu || docId}</td>
-                    <td>${data.ten_vat_tu}</td>
+                    <td class="text-secondary small">${docSnap.id}</td>
+                    <td class="fw-bold">${data.ten_vat_tu}</td>
+                    <td class="fw-bold text-success h5 mb-0">${data.so_ton_kho}</td>
                     <td>${data.don_vi}</td>
-                    <td class="fw-bold fs-5 ${data.so_ton_kho < 10 ? 'text-danger' : 'text-success'}">${data.so_ton_kho}</td>
                 </tr>
             `;
-
-            // Render Dropdown Modal
-            chonVatTu.innerHTML += `<option value="${docId}">${data.ten_vat_tu} (Tồn: ${data.so_ton_kho} ${data.don_vi})</option>`;
         });
     } catch (error) {
-        console.error("Lỗi khi tải kho: ", error);
-        bangTonKho.innerHTML = '<tr><td colspan="4" class="text-danger text-center">Lỗi kết nối cơ sở dữ liệu.</td></tr>';
+        console.error("Lỗi:", error);
+        bangTonKho.innerHTML = '<tr><td colspan="4" class="text-danger text-center">Lỗi tải kho.</td></tr>';
     }
 }
 
-// Xử lý Form Nhập / Xuất Kho
-document.getElementById('formGiaoDich').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const btnSubmit = document.getElementById('btnSubmitGiaoDich');
-    btnSubmit.disabled = true;
-    btnSubmit.innerText = "Đang xử lý...";
+// 3. XỬ LÝ LƯU PHIẾU NHẬP/XUẤT
+const formKho = document.getElementById('formKho');
+if (formKho) {
+    document.getElementById('ngayThucHien').value = new Date().toLocaleDateString('en-CA');
 
-    const loaiGiaoDich = document.getElementById('loaiGiaoDich').value;
-    const vatTuId = document.getElementById('chonVatTu').value;
-    const soLuong = parseFloat(document.getElementById('soLuong').value);
-    const ghiChu = document.getElementById('ghiChu').value;
+    formKho.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btnLuu = document.getElementById('btnLuuPhieu');
+        btnLuu.disabled = true;
+        btnLuu.innerText = "Đang xử lý...";
 
-    try {
-        // 1. Lấy số tồn hiện tại của vật tư đó
-        const vatTuRef = doc(db, "kho_vat_tu", vatTuId);
-        const vatTuSnap = await getDoc(vatTuRef);
-        const tonHienTai = vatTuSnap.data().so_ton_kho;
-
-        // 2. Tính toán số tồn mới
-        let tonMoi = tonHienTai;
-        if (loaiGiaoDich === 'nhap') {
-            tonMoi = tonHienTai + soLuong;
-        } else if (loaiGiaoDich === 'xuat') {
-            if (soLuong > tonHienTai) {
-                alert("Số lượng xuất vượt quá tồn kho!");
-                btnSubmit.disabled = false;
-                btnSubmit.innerText = "Xác nhận";
-                return;
-            }
-            tonMoi = tonHienTai - soLuong;
+        const loaiPhieu = document.getElementById('loaiPhieu').value;
+        const tenVatTu = document.getElementById('tenVatTu').value;
+        const soLuong = Number(document.getElementById('soLuong').value);
+        const donVi = document.getElementById('donVi').value;
+        const ngayThucHien = document.getElementById('ngayThucHien').value;
+        
+        if (!tenVatTu) {
+            alert("Vui lòng chọn vật tư!");
+            btnLuu.disabled = false;
+            btnLuu.innerText = "Lưu Phiếu";
+            return;
         }
 
-        // 3. Cập nhật số tồn mới vào bảng kho_vat_tu
-        await updateDoc(vatTuRef, { so_ton_kho: tonMoi });
+        // Tạo ID chuẩn hóa (Không dấu, bỏ khoảng trắng) để quản lý tồn kho
+        const vatTuId = tenVatTu.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_').toLowerCase();
 
-        // 4. Ghi lại lịch sử giao dịch vào bảng kho_giao_dich
-        await addDoc(giaoDichRef, {
-            vat_tu_id: vatTuId,
-            ten_vat_tu: vatTuSnap.data().ten_vat_tu,
-            loai_giao_dich: loaiGiaoDich,
-            so_luong: soLuong,
-            ton_cuoi: tonMoi,
-            ghi_chu: ghiChu,
-            nguoi_thuc_hien: "nv_001", // Tạm thời gán cứng, sau này tích hợp Auth sẽ lấy UID
-            thoi_gian: serverTimestamp()
-        });
+        try {
+            // 1. Lưu vào Nhật ký kho
+            await addDoc(nhatKyRef, {
+                loai_phieu: loaiPhieu,
+                ngay_thuc_hien: ngayThucHien,
+                ten_vat_tu: tenVatTu,
+                so_luong: soLuong,
+                don_vi: donVi,
+                ghi_chu: document.getElementById('ghiChuKho').value.trim(),
+                nguoi_thuc_hien: user.ten_hien_thi,
+                thoi_gian: serverTimestamp()
+            });
 
-        alert("Thao tác thành công!");
-        document.getElementById('formGiaoDich').reset();
-        
-        // Đóng modal bootstrap
-        const modal = bootstrap.Modal.getInstance(document.getElementById('modalGiaoDich'));
-        modal.hide();
+            // 2. Cập nhật Tồn kho
+            const tonKhoDoc = doc(db, "kho_vat_tu", vatTuId);
+            const tonKhoSnap = await getDoc(tonKhoDoc);
+            
+            let soTonMoi = soLuong;
+            if (tonKhoSnap.exists()) {
+                const soTonHienTai = tonKhoSnap.data().so_ton_kho;
+                soTonMoi = loaiPhieu === "nhap" ? soTonHienTai + soLuong : soTonHienTai - soLuong;
+            } else if (loaiPhieu === "xuat") {
+                alert("Lỗi: Không thể xuất vật tư chưa có trong kho!");
+                btnLuu.disabled = false;
+                btnLuu.innerText = "Lưu Phiếu";
+                return;
+            }
 
-        // Tải lại bảng dữ liệu
-        loadKho();
+            await setDoc(tonKhoDoc, {
+                ten_vat_tu: tenVatTu,
+                so_ton_kho: soTonMoi,
+                don_vi: donVi,
+                cap_nhat_cuoi: serverTimestamp()
+            }, { merge: true });
 
-    } catch (error) {
-        console.error("Lỗi giao dịch: ", error);
-        alert("Có lỗi xảy ra, vui lòng thử lại.");
-    } finally {
-        btnSubmit.disabled = false;
-        btnSubmit.innerText = "Xác nhận";
-    }
+            alert(`Lưu phiếu ${loaiPhieu === 'nhap' ? 'NHẬP' : 'XUẤT'} thành công!`);
+            document.getElementById('soLuong').value = '';
+            document.getElementById('ghiChuKho').value = '';
+            loadTonKho();
+            
+        } catch (error) {
+            console.error("Lỗi:", error);
+            alert("Có lỗi xảy ra khi lưu phiếu!");
+        } finally {
+            btnLuu.disabled = false;
+            btnLuu.innerText = "Lưu Phiếu";
+        }
+    });
+}
+
+// Chạy tải dữ liệu khi khởi tạo
+window.addEventListener('DOMContentLoaded', () => {
+    loadDanhMucVatTu();
+    loadTonKho();
 });
-
-// Khởi chạy khi load trang
-window.onload = loadKho;
